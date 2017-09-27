@@ -1,0 +1,7 @@
+{
+  "extends": "vts",
+  "rules": {
+    "no-var-requires": false,
+    "no-require-imports": false
+  }
+}

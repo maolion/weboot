@@ -1,0 +1,28 @@
+{
+  "name": "weboot",
+  "version": "0.0.1",
+  "description": "Quickly and easily make a web application bootstrap program",
+  "main": "./index.js",
+  "repository": "https://github.com/maolion/weboot.git",
+  "author": "maolion <maolion.j@gmail.com>",
+  "license": "MIT",
+  "bin": {
+    "weboot": "./bin/weboot"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "chalk": "^2.1.0",
+    "clime": "^0.5.5",
+    "rimraf": "^2.6.2",
+    "source-map-support": "^0.4.18",
+    "tslint": "^5.7.0",
+    "typescript": "^2.5.2",
+    "vts": "^5.6.2"
+  },
+  "devDependencies": {
+    "@types/chalk": "^0.4.31",
+    "@types/node": "^8.0.30"
+  }
+}
