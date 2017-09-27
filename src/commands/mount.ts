@@ -5,9 +5,9 @@ import {
 } from 'clime';
 
 @command({
-  brief: 'Generate and mount the web application bootstrap program',
+  brief: 'Mount the web application bootstrap program',
 })
-export default class GenerateCommand extends Command {
+export default class MountCommand extends Command {
   async execute(
     @param({
       required: true,

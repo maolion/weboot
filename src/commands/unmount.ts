@@ -5,9 +5,9 @@ import {
 } from 'clime';
 
 @command({
-  brief: 'Discharge the web application bootstrap program',
+  brief: 'Unmount the web application bootstrap program',
 })
-export default class DischargeCommand extends Command {
+export default class UnmountCommand extends Command {
   @metadata
   async execute(): Promise<void> {
     console.log('hello, world');

@@ -10,7 +10,8 @@
     "weboot": "./bin/weboot"
   },
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "build:bootstrap-lib": "tsc src/types.d.ts src/bootstrap.lib.ts -t ES5 --newLine lf --outFile dist/bootstrap.lib.js --strict true --noImplicitReturns true --noUnusedLocals true"
   },
   "dependencies": {
     "chalk": "^2.1.0",
