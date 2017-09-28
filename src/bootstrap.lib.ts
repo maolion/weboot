@@ -2,19 +2,11 @@
 /// <reference path="./types.d.ts" />
 
 namespace AppBootstrap {
-  export interface Resource {
-    url: string;
-    type: ResourceType;
-    block?: boolean;
-  }
-
   export type OnComplete = (error: any | undefined) => void;
   export type OnReady = (run: () => void) => void;
-  export type OnProgress = (percent: number, resource?: GeneralResourceType) => void;
+  export type OnProgress = (percent: number, resource?: Resource) => void;
   export type OnError = (reason: Error) => void;
   export type OnDone = () => void;
-
-  export type GeneralResourceType = Resource | string | ((onComplete: OnComplete) => void);
 
   export type ProcessHandler = (
     onReady: (handler: OnReady) => void,
@@ -26,7 +18,7 @@ namespace AppBootstrap {
   const TIMEOUT = 12000;
   const headElement = document.getElementsByTagName('head')[0];
 
-  export function start(items: GeneralResourceType[], process: ProcessHandler): void {
+  export function start(resources: Resource[], process: ProcessHandler): void {
     let listeners: {
       ready?: OnReady,
       progress?: OnProgress,
@@ -46,7 +38,7 @@ namespace AppBootstrap {
     );
 
     onReady(() => {
-      load(items, onProgress, error => {
+      load(resources, onProgress, error => {
         if (error) {
           onError(error);
         } else {
@@ -63,7 +55,7 @@ namespace AppBootstrap {
       }
     }
 
-    function onProgress(percent: number, nextResource: GeneralResourceType | undefined): void {
+    function onProgress(percent: number, nextResource: Resource | undefined): void {
       if (listeners.progress) {
         listeners.progress(percent, nextResource);
       }
@@ -82,7 +74,127 @@ namespace AppBootstrap {
     }
   }
 
+  function load(resources: Resource[], onProgress: OnProgress, onComplete: OnComplete): void {
+    resources = typeof resources === 'string' ? [resources] : resources;
+
+    let count = resources.length;
+    let loadingCount = 0;
+    let pendingResources = resources.slice();
+
+    next();
+
+    function next(): void {
+      let resource = pendingResources.shift();
+
+      let loadedCount = count - pendingResources.length - (loadingCount + 1);
+
+      onProgress(loadedCount > 0 ? loadedCount / count : 0, resource);
+
+      if (!resource) {
+        return;
+      }
+
+      loadingCount++;
+
+      if (resource instanceof Function) {
+        resource(onResourceLoadComplete.bind(undefined, resource));
+      } else if (isScriptResource(resource)) {
+        loadScript(
+          resource,
+          onResourceLoadComplete.bind(undefined, resource),
+        );
+
+        if (resource.block === false) {
+          next();
+        }
+      } else if (isStyleResource(resource)) {
+        loadStyle(
+          resource,
+          onResourceLoadComplete.bind(undefined, resource),
+        );
+
+        if (resource.block !== true) {
+          next();
+        }
+      } else {
+        onComplete(new Error('Unknown resource type'));
+      }
+    }
+
+    function onResourceLoadComplete(resource: Resource, error: Error | undefined): void {
+      let blockedNextResource = true;
+
+      if (resource.block === false || (isStyleResource(resource) && resource.block !== true)) {
+        blockedNextResource = false;
+      }
+
+      if (error) {
+        if (blockedNextResource) {
+          onComplete(new Error(`Failed to load "${resource.content}" of <${resource.type}>`));
+        }
+
+        return;
+      }
+
+      loadingCount = Math.max(loadingCount - 1, 0);
+
+      let loadedCount = count - pendingResources.length - loadingCount;
+
+      if (loadingCount === 0 && loadedCount === count) {
+        onProgress(1);
+        onComplete(undefined);
+        return;
+      }
+
+      if (!blockedNextResource) {
+        return;
+      }
+
+      next();
+    }
+  }
+
+  function loadStyle(resource: StyleResource, onComplete: OnComplete): void {
+    let isExternalStyle = resource.type === 'external-style';
+    let loader = isExternalStyle ?
+      createLoader('LINK', onComplete) : createLoader('STYLE', onComplete);
+
+    if (isExternalStyle) {
+      loader.setAttribute('rel', 'stylesheet');
+      loader.setAttribute('href', resource.content);
+    } else {
+      loader.setAttribute('type', 'text/style');
+
+      if ((loader as any).styleSheet) {
+        (loader as any).styleSheet.cssText = resource.content;
+      } else {
+        loader.appendChild(document.createTextNode(resource.content));
+      }
+
+      if (loader.onload instanceof Function) {
+        loader.onload(undefined as any);
+      }
+    }
+
+    mountLoader(loader);
+  }
+
+  function loadScript(resource: ScriptResource, onComplete: OnComplete): void {
+    let loader = createLoader('SCRIPT', onComplete);
+
+    loader.setAttribute('type', 'text/javascript');
+
+    if (resource.type === 'external-script') {
+      loader.setAttribute('src', resource.content);
+    } else {
+      loader.text = resource.content;
+    }
+
+    mountLoader(loader);
+  }
+
   function createLoader(tagType: 'SCRIPT', onComplete: OnComplete): HTMLScriptElement;
+  function createLoader(tagType: 'STYLE', onComplete: OnComplete): HTMLStyleElement;
   function createLoader(tagType: 'LINK', onComplete: OnComplete): HTMLLinkElement;
   function createLoader(tagType: ResourceTagType, onComplete: OnComplete) {
     let loader = document.createElement(tagType);
@@ -119,117 +231,15 @@ namespace AppBootstrap {
     }
   }
 
-  function mountLoader(loader: HTMLScriptElement | HTMLLinkElement): void {
+  function mountLoader(loader: HTMLScriptElement | HTMLStyleElement | HTMLLinkElement): void {
     headElement.appendChild(loader);
   }
 
-  function loadScript(url: string, onComplete: OnComplete): void {
-    let loader = createLoader('SCRIPT', onComplete);
-
-    loader.setAttribute('type', 'text/javascript');
-    loader.setAttribute('src', url);
-
-    mountLoader(loader);
+  function isStyleResource(resource: Resource): resource is StyleResource {
+    return resource && resource.type === 'external-style' || resource.type === 'inline-style';
   }
 
-  function loadStyle(url: string, onComplete: OnComplete): void {
-    let loader = createLoader('LINK', onComplete);
-
-    loader.setAttribute('rel', 'stylesheet');
-    loader.setAttribute('href', url);
-
-    mountLoader(loader);
-  }
-
-  function load(resources: GeneralResourceType[], onProgress: OnProgress, onComplete: OnComplete): void {
-    resources = typeof resources === 'string' ? [resources] : resources;
-
-    let count = resources.length;
-    let loadingCount = 0;
-    let pendingResources = resources.slice();
-
-    next();
-
-    function next(): void {
-      let resource = pendingResources.shift();
-
-      let loadedCount = count - pendingResources.length - (loadingCount + 1);
-
-      onProgress(loadedCount > 0 ? loadedCount / count : 0, resource);
-
-      if (!resource) {
-        return;
-      }
-
-      loadingCount++;
-
-      if (resource instanceof Function) {
-        resource(onResourceLoadComplete.bind(undefined, resource));
-      } else if (isScriptsResource(resource)) {
-        loadScript(
-          isResourceObject(resource) ? resource.url : resource,
-          onResourceLoadComplete.bind(undefined, resource),
-        );
-      } else if (isStyleResource(resource)) {
-        loadStyle(
-          isResourceObject(resource) ? resource.url : resource,
-          onResourceLoadComplete.bind(undefined, resource),
-        );
-
-        if (isResourceObject(resource) && resource.block !== true) {
-          next();
-        }
-      } else {
-        onComplete(new Error('Unknown resource type'));
-      }
-    }
-
-    function onResourceLoadComplete(resource: GeneralResourceType, error: Error | undefined): void {
-      let blockedNextResource = !(isResourceObject(resource) && isStyleResource(resource) && resource.block !== true);
-
-      if (error) {
-        if (blockedNextResource) {
-          onComplete(new Error(`Failed to load ${resource}`));
-        }
-
-        return;
-      }
-
-      loadingCount = Math.max(loadingCount - 1, 0);
-
-      let loadedCount = count - pendingResources.length - loadingCount;
-
-      if (loadingCount === 0 && loadedCount === count) {
-        onProgress(1);
-        onComplete(undefined);
-        return;
-      }
-
-      if (!blockedNextResource) {
-        return;
-      }
-
-      next();
-    }
-  }
-
-  function isStyleResource(resource: GeneralResourceType): boolean {
-    if (resource instanceof Function) {
-      return false;
-    }
-
-    return isResourceObject(resource) ? resource.type === 'style' : /\.css$/i.test(resource);
-  }
-
-  function isScriptsResource(resource: GeneralResourceType): boolean {
-    if (resource instanceof Function) {
-      return false;
-    }
-
-    return isResourceObject(resource) ? resource.type === 'script' : /\.js$/i.test(resource);
-  }
-
-  function isResourceObject(resource: any): resource is Resource {
-    return resource && !(resource instanceof Function) && typeof resource === 'object';
+  function isScriptResource(resource: Resource): resource is ScriptResource {
+    return resource && resource.type === 'external-script' || resource.type === 'inline-script';
   }
 }

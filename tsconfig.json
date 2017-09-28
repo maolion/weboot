@@ -24,6 +24,7 @@
     "./src/**/*"
   ],
   "exclude": [
+    "src/bootstrap.lib.ts",
     "src/**/*.1.ts"
   ]
 }
