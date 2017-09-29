@@ -75,8 +75,6 @@ namespace AppBootstrap {
   }
 
   function load(resources: Resource[], onProgress: OnProgress, onComplete: OnComplete): void {
-    resources = typeof resources === 'string' ? [resources] : resources;
-
     let count = resources.length;
     let loadingCount = 0;
     let pendingResources = resources.slice();
@@ -104,7 +102,7 @@ namespace AppBootstrap {
           onResourceLoadComplete.bind(undefined, resource),
         );
 
-        if (resource.block === false) {
+        if (resource.type === 'inline-script' || resource.block === false) {
           next();
         }
       } else if (isStyleResource(resource)) {
@@ -113,7 +111,7 @@ namespace AppBootstrap {
           onResourceLoadComplete.bind(undefined, resource),
         );
 
-        if (resource.block !== true) {
+        if (resource.type === 'inline-style' || resource.block !== true) {
           next();
         }
       } else {

@@ -1,3 +1,5 @@
+// tslint:disable:max-line-length
+
 import * as Path from 'path';
 
 import {
@@ -6,11 +8,12 @@ import {
   param,
 } from 'clime';
 
-import { readFile } from '../utils';
+import { readFile, writeFile } from '../utils';
 
 import { CWD } from '../constants';
 
-// tslint:disable-next-line:max-line-length
+const VERSION = require('../../package.json').version;
+
 const resourceSectionRegEx = /<link[^>]*(?:rel="stylesheet")+[^>]*>|<style[^>]*>[^]*?<\/style>|<script[^>]*src="[^"]+"[^>]*>\s*<\/script>|<script[^>]*>[^]*?<\/script>/gi;
 const inlineStyleSectionRegEx = /<style[^>]*>[^]+?<\/style>/i;
 const externalStyleSectionRegEx = /<link/i;
@@ -45,11 +48,43 @@ export default class MountCommand extends Command {
     })
     output: string,
   ): Promise<void> {
-    const originalEntryHtml = readFile(Path.join(CWD, entryHtml));
-
+    const entryFile = Path.join(CWD, entryHtml);
+    const entryDir = Path.dirname(entryFile);
+    const originalEntryHtml = readFile(entryFile);
+    const bootstrapLibSourceCode = readFile(Path.join(CWD, 'dist', 'bootstrap.lib.js'));
+    const bootScriptSourceCode = bootScript ? readFile(Path.join(CWD, bootScript)) : '';
+    const bootStyleSourceCode = bootScript ?
+      readFile(Path.join(
+        CWD,
+        Path.dirname(bootScript),
+        Path.basename(bootScript, Path.extname(bootScript)),
+        '.css',
+      )) : '';
     const entryResources = parseEntryResources(originalEntryHtml);
 
-    console.log(entryResources);
+    let outputEntryHtml = originalEntryHtml.replace(resourceSectionRegEx, '');
+
+    if (bootStyleSourceCode) {
+      outputEntryHtml = outputEntryHtml
+        .replace('</head>', `<!--{BOOT STYLE--><style>${bootStyleSourceCode}</style><!--BOOT STYLE}--></head>`);
+    }
+
+    let bootstrapCode = `
+    (function(){
+      ${bootstrapLibSourceCode}
+
+      ;'/* weboot start */';
+      AppBootstrap.start(${JSON.stringify(entryResources)}, function(onReady, onProgress, onError, onDone, AppBootstrap) {
+        ${bootScriptSourceCode}
+      });
+      ;'/* weboot end */'
+    })();
+    `;
+
+    outputEntryHtml = outputEntryHtml
+      .replace('</body>', `<!--Weboot v${VERSION}--><!--{BOOT SCRIPT--><script>${bootstrapCode}</script></body>`);
+
+    writeFile(Path.join(entryDir, 'x-index.html'), outputEntryHtml);
   }
 }
 
