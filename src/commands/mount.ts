@@ -1,10 +1,13 @@
 // tslint:disable:max-line-length
 
 import * as Path from 'path';
+import * as UglifyJS from 'uglify-js';
 
 import {
   Command,
+  Options,
   command,
+  option,
   param,
 } from 'clime';
 
@@ -23,6 +26,16 @@ const styleTagRegEx = /<style[^>]*>([^]+?)<\/style>/i;
 const styleLinkTagRegEx = /<link[^>]*href="([^"]+)"[^>]*>/i;
 const scriptTagRegEx = /<script[^>]*>([^]+?)<\/script>/i;
 const scriptLinkTagRegEx = /<script[^>]*src="([^"]+)"[^>]*>[\s]*<\/script>/i;
+
+export class MountOptions extends Options {
+  @option<boolean>({
+    flag: 'p',
+    description: 'enable optimize minimize source code',
+    default: false,
+    toggle: true,
+  })
+  prod: boolean;
+}
 
 @command({
   brief: 'Mount the web application bootstrap program',
@@ -47,6 +60,7 @@ export default class MountCommand extends Command {
       description: 'Output file path',
     })
     output: string,
+    options: MountOptions,
   ): Promise<void> {
     const entryFile = Path.join(CWD, entryHtml);
     const entryDir = Path.dirname(entryFile);
@@ -66,7 +80,7 @@ export default class MountCommand extends Command {
 
     if (bootStyleSourceCode) {
       outputEntryHtml = outputEntryHtml
-        .replace('</head>', `<!--{BOOT STYLE--><style>${bootStyleSourceCode}</style><!--BOOT STYLE}--></head>`);
+        .replace('</head>', `<!--Weboot v${VERSION} styles--><style>${minimizeCSS(bootStyleSourceCode, options.prod)}</style><!--BOOT STYLE}--></head>`);
     }
 
     let bootstrapCode = `
@@ -82,7 +96,7 @@ export default class MountCommand extends Command {
     `;
 
     outputEntryHtml = outputEntryHtml
-      .replace('</body>', `<!--Weboot v${VERSION}--><!--{BOOT SCRIPT--><script>${bootstrapCode}</script></body>`);
+      .replace('</body>', `<!--Weboot v${VERSION} scripts--><script>${minimizeJS(bootstrapCode, options.prod)}</script></body>`);
 
     writeFile(Path.join(entryDir, 'x-index.html'), outputEntryHtml);
   }
@@ -169,4 +183,30 @@ function extractExternalScriptResource(resourceSection: string): ScriptResource 
     content: match ? match[1] : '',
     type: 'external-script',
   };
+}
+
+// helpers
+
+function minimizeJS(code: string, enable = true): string {
+  if (!enable) {
+    return code;
+  }
+
+  let result = UglifyJS.minify(code, {
+    warnings: false,
+  });
+
+  if ((result as any).error) {
+    throw new Error((result as any).error);
+  }
+
+  return result.code;
+}
+
+function minimizeCSS(code: string, enable = true): string {
+  if (!enable) {
+    return code;
+  }
+
+  return code.replace(/(?:^\s+|[\r\n]+\s*|[\s\r\n]*$)/g, '');
 }
