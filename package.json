@@ -2,16 +2,18 @@
   "name": "weboot",
   "version": "0.0.1",
   "description": "Quickly and easily make a web application bootstrap program",
-  "main": "./index.js",
+  "main": "./dist/index.js",
   "repository": "https://github.com/maolion/weboot.git",
-  "author": "maolion <maolion.j@gmail.com>",
+  "author": "maolion",
   "license": "MIT",
   "bin": {
     "weboot": "./bin/weboot"
   },
   "scripts": {
-    "build": "tsc",
-    "build:bootstrap-lib": "tsc src/types.d.ts src/bootstrap.lib.ts -t ES5 --newLine lf --outFile dist/bootstrap.lib.js --strict true --noImplicitReturns true --noUnusedLocals true"
+    "build": "rimraf dist && yarn build:bootstrap-lib && tsc",
+    "lint": "tslint -c tslint.json --project tsconfig.json --type-check",
+    "build:bootstrap-lib": "tsc src/types.d.ts src/bootstrap.lib.ts -t ES5 --newLine lf --outFile dist/bootstrap.lib.js --strict true --noImplicitReturns true --noUnusedLocals true",
+    "prepublish": "yarn lint && yarn build"
   },
   "dependencies": {
     "chalk": "^2.1.0",
