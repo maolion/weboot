@@ -2,3 +2,10 @@ node_modules
 /.vscode/**
 !/.vscode/settings.json
 /dist
+
+/test/*
+!/test/scripts
+!/test/styles
+!/test/index.html
+!/test/boot.js
+!/test/boot.css
