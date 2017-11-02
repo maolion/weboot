@@ -1,4 +1,8 @@
-declare type ResourceType = 'external-script' | 'inline-script' | 'external-style' | 'inline-style';
+declare type ResourceType =
+  | 'external-script'
+  | 'inline-script'
+  | 'external-style'
+  | 'inline-style';
 declare type ResourceTagType = 'SCRIPT' | 'STYLE' | 'LINK';
 
 declare interface Resource {

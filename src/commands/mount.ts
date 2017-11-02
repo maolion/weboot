@@ -3,13 +3,7 @@
 import * as Path from 'path';
 import * as UglifyJS from 'uglify-js';
 
-import {
-  Command,
-  Options,
-  command,
-  option,
-  param,
-} from 'clime';
+import { Command, Options, command, option, param } from 'clime';
 
 import { readFile, safeReadFile, writeFile } from '../utils';
 
@@ -32,42 +26,42 @@ export class MountOptions extends Options {
     flag: 'p',
     description: 'Enable optimize minimize source code',
     default: false,
-    toggle: true,
+    toggle: true
   })
   prod: boolean;
 
   @option<string>({
     flag: 'b',
-    description: 'Specify boot script file path',
+    description: 'Specify boot script file path'
   })
   bootScript: string;
 
   @option<boolean>({
     description: 'Disable warning log',
     default: false,
-    toggle: true,
+    toggle: true
   })
   noWarning: boolean;
 }
 
 @command({
-  brief: 'Mount the web application bootstrap program',
+  brief: 'Mount the web application bootstrap program'
 })
 export default class MountCommand extends Command {
   async execute(
     @param({
       required: true,
       type: String,
-      description: 'Entry html file path',
+      description: 'Entry html file path'
     })
     entryHtml: string,
     @param({
       required: false,
       type: String,
-      description: 'Output file path',
+      description: 'Output file path'
     })
     output: string,
-    options: MountOptions,
+    options: MountOptions
   ): Promise<void> {
     const entryFile = Path.join(CWD, entryHtml);
     const originalEntryHtml = readFile(entryFile);
@@ -80,22 +74,34 @@ export default class MountCommand extends Command {
       return;
     }
 
-    const bootstrapLibSourceCode = readFile(Path.join(CWD, 'dist', 'bootstrap.lib.js'));
+    const bootstrapLibSourceCode = readFile(
+      Path.join(CWD, 'dist', 'bootstrap.lib.js')
+    );
     const bootScript = options.bootScript;
-    const bootScriptSourceCode = bootScript ? readFile(Path.join(CWD, bootScript)) : '';
-    const bootStyleSourceCode = bootScript ?
-      safeReadFile(Path.join(
-        CWD,
-        Path.dirname(bootScript),
-        `${Path.basename(bootScript, Path.extname(bootScript))}.css`,
-      )) : '';
+    const bootScriptSourceCode = bootScript
+      ? readFile(Path.join(CWD, bootScript))
+      : '';
+    const bootStyleSourceCode = bootScript
+      ? safeReadFile(
+          Path.join(
+            CWD,
+            Path.dirname(bootScript),
+            `${Path.basename(bootScript, Path.extname(bootScript))}.css`
+          )
+        )
+      : '';
     const entryResources = parseEntryResources(originalEntryHtml);
 
     let outputEntryHtml = originalEntryHtml.replace(resourceSectionRegEx, '');
 
     if (bootStyleSourceCode) {
-      outputEntryHtml = outputEntryHtml
-        .replace('</head>', `<!--Weboot v${VERSION} {BOOT STYLE--><style>${minimizeCSS(bootStyleSourceCode, options.prod)}</style><!--BOOT STYLE}--></head>`);
+      outputEntryHtml = outputEntryHtml.replace(
+        '</head>',
+        `<!--Weboot v${VERSION} {BOOT STYLE--><style>${minimizeCSS(
+          bootStyleSourceCode,
+          options.prod
+        )}</style><!--BOOT STYLE}--></head>`
+      );
     }
 
     let bootstrapCode = `
@@ -103,17 +109,24 @@ export default class MountCommand extends Command {
       ${bootstrapLibSourceCode}
 
       ;'/* weboot start */';
-      AppBootstrap.start(${JSON.stringify(entryResources)}, function(onReady, onProgress, onError, onDone, AppBootstrap) {
+      AppBootstrap.start(${JSON.stringify(
+        entryResources
+      )}, function(onReady, onProgress, onError, onDone, AppBootstrap) {
         ${bootScriptSourceCode}
       });
       ;'/* weboot end */'
     })();
     `;
 
-    outputEntryHtml = outputEntryHtml
-      .replace('</body>', `<!--Weboot v${VERSION} {BOOT SCRIPT--><script>${minimizeJS(bootstrapCode, options.prod)}</script><!--BOOT SCRIPT}--></body>`);
+    outputEntryHtml = outputEntryHtml.replace(
+      '</body>',
+      `<!--Weboot v${VERSION} {BOOT SCRIPT--><script>${minimizeJS(
+        bootstrapCode,
+        options.prod
+      )}</script><!--BOOT SCRIPT}--></body>`
+    );
 
-    writeFile(Path.join(CWD, output), outputEntryHtml);
+    writeFile(output ? Path.join(CWD, output) : entryFile, outputEntryHtml);
   }
 }
 
@@ -124,7 +137,7 @@ function parseEntryResources(entryHTML: string): Resource[] {
   let match: string[] | undefined | null;
 
   // tslint:disable-next-line:no-conditional-assignment
-  while (match = resourceSectionRegEx.exec(entryHTML)) {
+  while ((match = resourceSectionRegEx.exec(entryHTML))) {
     let resourceSection = match[0];
 
     switch (true) {
@@ -167,7 +180,7 @@ function extractInlineStyleResource(resourceSection: string): StyleResource {
 
   return {
     content: match ? match[1] : '',
-    type: 'inline-style',
+    type: 'inline-style'
   };
 }
 
@@ -176,7 +189,7 @@ function extractExternalStyleResource(resourceSection: string): StyleResource {
 
   return {
     content: match ? match[1] : '',
-    type: 'external-style',
+    type: 'external-style'
   };
 }
 
@@ -185,16 +198,18 @@ function extractInlineScriptResource(resourceSection: string): ScriptResource {
 
   return {
     content: match ? match[1] : '',
-    type: 'inline-script',
+    type: 'inline-script'
   };
 }
 
-function extractExternalScriptResource(resourceSection: string): ScriptResource {
+function extractExternalScriptResource(
+  resourceSection: string
+): ScriptResource {
   let match = resourceSection.match(scriptLinkTagRegEx);
 
   return {
     content: match ? match[1] : '',
-    type: 'external-script',
+    type: 'external-script'
   };
 }
 
@@ -206,7 +221,7 @@ function minimizeJS(code: string, enable = true): string {
   }
 
   let result = UglifyJS.minify(code, {
-    warnings: false,
+    warnings: false
   });
 
   if ((result as any).error) {

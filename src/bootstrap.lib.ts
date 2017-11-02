@@ -12,7 +12,7 @@ namespace AppBootstrap {
     onReady: (handler: OnReady) => void,
     onProgress: (handler: OnProgress) => void,
     onError: (handler: OnError) => void,
-    onDone: (handler: OnDone) => void,
+    onDone: (handler: OnDone) => void
   ) => void;
 
   const TIMEOUT = 12000;
@@ -20,21 +20,29 @@ namespace AppBootstrap {
 
   export function start(resources: Resource[], process: ProcessHandler): void {
     let listeners: {
-      ready?: OnReady,
-      progress?: OnProgress,
-      error?: OnError,
-      done?: OnDone,
+      ready?: OnReady;
+      progress?: OnProgress;
+      error?: OnError;
+      done?: OnDone;
     } = {};
 
     process(
       // ready
-      handler => { listeners.ready = handler; },
+      handler => {
+        listeners.ready = handler;
+      },
       // progress
-      handler => { listeners.progress = handler; },
+      handler => {
+        listeners.progress = handler;
+      },
       // error
-      handler => { listeners.error = handler; },
+      handler => {
+        listeners.error = handler;
+      },
       // done
-      handler => { listeners.done = handler; },
+      handler => {
+        listeners.done = handler;
+      }
     );
 
     onReady(() => {
@@ -55,7 +63,10 @@ namespace AppBootstrap {
       }
     }
 
-    function onProgress(percent: number, nextResource: Resource | undefined): void {
+    function onProgress(
+      percent: number,
+      nextResource: Resource | undefined
+    ): void {
       if (listeners.progress) {
         listeners.progress(percent, nextResource);
       }
@@ -74,7 +85,11 @@ namespace AppBootstrap {
     }
   }
 
-  function load(resources: Resource[], onProgress: OnProgress, onComplete: OnComplete): void {
+  function load(
+    resources: Resource[],
+    onProgress: OnProgress,
+    onComplete: OnComplete
+  ): void {
     let count = resources.length;
     let loadingCount = 0;
     let pendingResources = resources.slice();
@@ -86,7 +101,10 @@ namespace AppBootstrap {
 
       let loadedCount = count - pendingResources.length - (loadingCount + 1);
 
-      onProgress(loadedCount > 0 ? Math.round(loadedCount / count * 10000) / 100 : 0, resource);
+      onProgress(
+        loadedCount > 0 ? Math.round(loadedCount / count * 10000) / 100 : 0,
+        resource
+      );
 
       if (!resource) {
         return;
@@ -97,19 +115,13 @@ namespace AppBootstrap {
       if (resource instanceof Function) {
         resource(onResourceLoadComplete.bind(undefined, resource));
       } else if (isScriptResource(resource)) {
-        loadScript(
-          resource,
-          onResourceLoadComplete.bind(undefined, resource),
-        );
+        loadScript(resource, onResourceLoadComplete.bind(undefined, resource));
 
         if (resource.type === 'inline-script' || resource.block === false) {
           next();
         }
       } else if (isStyleResource(resource)) {
-        loadStyle(
-          resource,
-          onResourceLoadComplete.bind(undefined, resource),
-        );
+        loadStyle(resource, onResourceLoadComplete.bind(undefined, resource));
 
         if (resource.type === 'inline-style' || resource.block !== true) {
           next();
@@ -119,16 +131,26 @@ namespace AppBootstrap {
       }
     }
 
-    function onResourceLoadComplete(resource: Resource, error: Error | undefined): void {
+    function onResourceLoadComplete(
+      resource: Resource,
+      error: Error | undefined
+    ): void {
       let blockedNextResource = true;
 
-      if (resource.block === false || (isStyleResource(resource) && resource.block !== true)) {
+      if (
+        resource.block === false ||
+        (isStyleResource(resource) && resource.block !== true)
+      ) {
         blockedNextResource = false;
       }
 
       if (error) {
         if (blockedNextResource) {
-          onComplete(new Error(`Failed to load "${resource.content}" of <${resource.type}>`));
+          onComplete(
+            new Error(
+              `Failed to load "${resource.content}" of <${resource.type}>`
+            )
+          );
         }
 
         return;
@@ -154,8 +176,9 @@ namespace AppBootstrap {
 
   function loadStyle(resource: StyleResource, onComplete: OnComplete): void {
     let isExternalStyle = resource.type === 'external-style';
-    let loader = isExternalStyle ?
-      createLoader('LINK', onComplete) : createLoader('STYLE', onComplete);
+    let loader = isExternalStyle
+      ? createLoader('LINK', onComplete)
+      : createLoader('STYLE', onComplete);
 
     if (isExternalStyle) {
       loader.setAttribute('rel', 'stylesheet');
@@ -191,9 +214,18 @@ namespace AppBootstrap {
     mountLoader(loader);
   }
 
-  function createLoader(tagType: 'SCRIPT', onComplete: OnComplete): HTMLScriptElement;
-  function createLoader(tagType: 'STYLE', onComplete: OnComplete): HTMLStyleElement;
-  function createLoader(tagType: 'LINK', onComplete: OnComplete): HTMLLinkElement;
+  function createLoader(
+    tagType: 'SCRIPT',
+    onComplete: OnComplete
+  ): HTMLScriptElement;
+  function createLoader(
+    tagType: 'STYLE',
+    onComplete: OnComplete
+  ): HTMLStyleElement;
+  function createLoader(
+    tagType: 'LINK',
+    onComplete: OnComplete
+  ): HTMLLinkElement;
   function createLoader(tagType: ResourceTagType, onComplete: OnComplete) {
     let loader = document.createElement(tagType);
     let timeoutTimerHandle: number;
@@ -201,7 +233,7 @@ namespace AppBootstrap {
     if ('onload' in loader) {
       loader.onload = onLoad;
     } else {
-      (loader as any).onreadystatechange = function () {
+      (loader as any).onreadystatechange = function() {
         if (this.readyState === 'loaded' || this.readyState === 'complete') {
           onLoad();
         }
@@ -210,12 +242,12 @@ namespace AppBootstrap {
 
     loader.onerror = onError;
 
-    timeoutTimerHandle = setTimeout(onError, TIMEOUT) as any as number;
+    timeoutTimerHandle = (setTimeout(onError, TIMEOUT) as any) as number;
 
     return loader;
 
     function onLoad(): void {
-      (loader as any).onload =  (loader as any).onerror = undefined;
+      (loader as any).onload = (loader as any).onerror = undefined;
 
       clearTimeout(timeoutTimerHandle);
 
@@ -223,21 +255,29 @@ namespace AppBootstrap {
     }
 
     function onError(): void {
-      (loader as any).onload =  (loader as any).onerror = undefined;
+      (loader as any).onload = (loader as any).onerror = undefined;
 
       onComplete(true);
     }
   }
 
-  function mountLoader(loader: HTMLScriptElement | HTMLStyleElement | HTMLLinkElement): void {
+  function mountLoader(
+    loader: HTMLScriptElement | HTMLStyleElement | HTMLLinkElement
+  ): void {
     headElement.appendChild(loader);
   }
 
   function isStyleResource(resource: Resource): resource is StyleResource {
-    return resource && resource.type === 'external-style' || resource.type === 'inline-style';
+    return (
+      (resource && resource.type === 'external-style') ||
+      resource.type === 'inline-style'
+    );
   }
 
   function isScriptResource(resource: Resource): resource is ScriptResource {
-    return resource && resource.type === 'external-script' || resource.type === 'inline-script';
+    return (
+      (resource && resource.type === 'external-script') ||
+      resource.type === 'inline-script'
+    );
   }
 }
