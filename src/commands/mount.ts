@@ -11,7 +11,7 @@ import {
   param,
 } from 'clime';
 
-import { readFile, writeFile } from '../utils';
+import { readFile, safeReadFile, writeFile } from '../utils';
 
 import { CWD } from '../constants';
 
@@ -30,11 +30,24 @@ const scriptLinkTagRegEx = /<script[^>]*src="([^"]+)"[^>]*>[\s]*<\/script>/i;
 export class MountOptions extends Options {
   @option<boolean>({
     flag: 'p',
-    description: 'enable optimize minimize source code',
+    description: 'Enable optimize minimize source code',
     default: false,
     toggle: true,
   })
   prod: boolean;
+
+  @option<string>({
+    flag: 'b',
+    description: 'Specify boot script file path',
+  })
+  bootScript: string;
+
+  @option<boolean>({
+    description: 'Disable warning log',
+    default: false,
+    toggle: true,
+  })
+  noWarning: boolean;
 }
 
 @command({
@@ -51,28 +64,30 @@ export default class MountCommand extends Command {
     @param({
       required: false,
       type: String,
-      description: 'Boot script file path',
-    })
-    bootScript: string,
-    @param({
-      required: false,
-      type: String,
       description: 'Output file path',
     })
     output: string,
     options: MountOptions,
   ): Promise<void> {
     const entryFile = Path.join(CWD, entryHtml);
-    const entryDir = Path.dirname(entryFile);
     const originalEntryHtml = readFile(entryFile);
+
+    if (/<!--Weboot v[^ ]+ {BOOT/.test(originalEntryHtml)) {
+      if (!options.noWarning) {
+        // tslint:disable-next-line
+        console.warn('Target was mounted weboot!!!');
+      }
+      return;
+    }
+
     const bootstrapLibSourceCode = readFile(Path.join(CWD, 'dist', 'bootstrap.lib.js'));
+    const bootScript = options.bootScript;
     const bootScriptSourceCode = bootScript ? readFile(Path.join(CWD, bootScript)) : '';
     const bootStyleSourceCode = bootScript ?
-      readFile(Path.join(
+      safeReadFile(Path.join(
         CWD,
         Path.dirname(bootScript),
-        Path.basename(bootScript, Path.extname(bootScript)),
-        '.css',
+        `${Path.basename(bootScript, Path.extname(bootScript))}.css`,
       )) : '';
     const entryResources = parseEntryResources(originalEntryHtml);
 
@@ -80,7 +95,7 @@ export default class MountCommand extends Command {
 
     if (bootStyleSourceCode) {
       outputEntryHtml = outputEntryHtml
-        .replace('</head>', `<!--Weboot v${VERSION} styles--><style>${minimizeCSS(bootStyleSourceCode, options.prod)}</style><!--BOOT STYLE}--></head>`);
+        .replace('</head>', `<!--Weboot v${VERSION} {BOOT STYLE--><style>${minimizeCSS(bootStyleSourceCode, options.prod)}</style><!--BOOT STYLE}--></head>`);
     }
 
     let bootstrapCode = `
@@ -96,9 +111,9 @@ export default class MountCommand extends Command {
     `;
 
     outputEntryHtml = outputEntryHtml
-      .replace('</body>', `<!--Weboot v${VERSION} scripts--><script>${minimizeJS(bootstrapCode, options.prod)}</script></body>`);
+      .replace('</body>', `<!--Weboot v${VERSION} {BOOT SCRIPT--><script>${minimizeJS(bootstrapCode, options.prod)}</script><!--BOOT SCRIPT}--></body>`);
 
-    writeFile(Path.join(entryDir, 'x-index.html'), outputEntryHtml);
+    writeFile(Path.join(CWD, output), outputEntryHtml);
   }
 }
 
@@ -125,8 +140,6 @@ function parseEntryResources(entryHTML: string): Resource[] {
       case isExternalScriptResourceSection(resourceSection):
         resources.push(extractExternalScriptResource(resourceSection));
         break;
-      default:
-        throw new Error(`Unexpect resource "${resourceSection}"`);
     }
   }
 

@@ -86,7 +86,7 @@ namespace AppBootstrap {
 
       let loadedCount = count - pendingResources.length - (loadingCount + 1);
 
-      onProgress(loadedCount > 0 ? loadedCount / count : 0, resource);
+      onProgress(loadedCount > 0 ? Math.round(loadedCount / count * 10000) / 100 : 0, resource);
 
       if (!resource) {
         return;
@@ -139,7 +139,7 @@ namespace AppBootstrap {
       let loadedCount = count - pendingResources.length - loadingCount;
 
       if (loadingCount === 0 && loadedCount === count) {
-        onProgress(1);
+        onProgress(100);
         onComplete(undefined);
         return;
       }
@@ -161,7 +161,7 @@ namespace AppBootstrap {
       loader.setAttribute('rel', 'stylesheet');
       loader.setAttribute('href', resource.content);
     } else {
-      loader.setAttribute('type', 'text/style');
+      loader.setAttribute('type', 'text/css');
 
       if ((loader as any).styleSheet) {
         (loader as any).styleSheet.cssText = resource.content;
