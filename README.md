@@ -13,14 +13,12 @@ $ yarn global ad weboot
 ## Usage
 
 ```sh
-$ weboot mount path/to/index.html
-```
-
-Get more usage information
-
-```sh
 $ weboot --help
 ```
+
+## License
+
+MIT License.
 
 ----
 
