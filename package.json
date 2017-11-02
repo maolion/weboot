@@ -1,6 +1,6 @@
 {
   "name": "weboot",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Quickly and easily make a web application bootstrap program",
   "main": "./dist/index.js",
   "repository": "https://github.com/maolion/weboot.git",
