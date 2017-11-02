@@ -75,7 +75,7 @@ export default class MountCommand extends Command {
     }
 
     const bootstrapLibSourceCode = readFile(
-      Path.join(CWD, 'dist', 'bootstrap.lib.js')
+      Path.join(__dirname, '../', 'bootstrap.lib.js')
     );
     const bootScript = options.bootScript;
     const bootScriptSourceCode = bootScript
