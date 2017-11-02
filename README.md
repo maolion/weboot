@@ -7,7 +7,7 @@ Quickly and easily make a web application bootstrap program!
 ```sh
 $ npm install weboot -g
 # or
-$ yarn global ad weboot
+$ yarn global add weboot
 ```
 
 ## Usage
