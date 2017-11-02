@@ -3,8 +3,8 @@ onReady(function(go) {
   go();
 });
 
-onProgress(function(percentage) {
-  console.log('loading...', percentage);
+onProgress(function(percentage, resource) {
+  console.log('loading...', percentage, resource);
 });
 
 onDone(function() {
