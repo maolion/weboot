@@ -1,0 +1,8 @@
+/src/
+/.vscode/
+/test/
+
+/tsconfig.json
+/tslint.json
+
+.*
