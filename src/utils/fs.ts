@@ -13,5 +13,5 @@ export function safeReadFile(path: string): string {
 }
 
 export function writeFile(path: string, content: string): void {
-  return FS.writeFileSync(path, content, 'utf8');
+  FS.writeFileSync(path, content, 'utf8');
 }
